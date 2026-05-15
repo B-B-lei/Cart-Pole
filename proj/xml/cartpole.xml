@@ -1,0 +1,90 @@
+<mujoco model="two_link_inverted_pendulum_car">
+<!-- 编译器选项  -->
+  <compiler 
+      coordinate="local" 
+      angle="degree" 
+      autolimits="true"/>
+
+<!--配置dt-->
+  <option 
+      timestep="0.002" 
+      integrator="RK4" 
+      cone="elliptic"/>
+
+ <!-- 防止穿模,给出摩擦系数
+  <contact>
+    <pair geom1="pole_1" geom2="pole_2" friction="0.8 0.01 0.05"/>
+    <pair geom1="chassis_geo" geom2="pole_1" friction="0.8 0.01 0.05"/>
+  </contact> -->
+<!--上面的部分暂时注释掉,防止额外计算,我们可以通过RL env中限制poles的角度为终止条件,穿模可忽略-->
+
+<!--模板配置-->
+  <default>
+    <joint damping="0.005" armature="0.001"/>
+    <geom condim="3" friction="0.8 0.01 0.005" solref="0.01 1" solimp="0.9 0.95 0.001"/>
+    <motor ctrlrange="-1 1"/>
+  </default>
+
+<!--美观的地板😃-->
+  <asset>
+    <texture name="grid" type="2d" builtin="checker" rgb1=".1 .2 .3"
+     rgb2=".2 .3 .4" width="300" height="300"/>
+    <material name="grid" texture="grid" texrepeat="8 8" reflectance=".2"/>
+  </asset>
+
+
+  <worldbody>
+    <geom name="ground" size="3 3 .1" type="plane" material="grid"/>
+
+    <light pos="0 0 3"/>
+
+ <!--重量的分配:底盘0.5kg+车身0.4kg+杆子0.1kg ;两轮子0.1kg总计1.1,有待商榷-->
+    <body name="chassis" pos="0 0 0.0335">
+        <!-- <joint name="chassis" type="slide" axis="1 0 0" range="-3 3"/> -->
+        <freejoint/>
+        <geom name="chassis" type="cylinder" size="0.02 0.08" rgba="0.2 0.6 0.8 1" zaxis="0 1 0" mass="0.5"/>
+
+        <body name="left_wheel" pos="0 0.08 0">
+            <joint name="left_wheel" type="hinge" damping="0.01" armature="0.04" axis="0 1 0"/>
+            <geom name="left_wheel" type="cylinder" size="0.0335 0.01" rgba="0 0 0 1" zaxis="0 1 0" friction="1.2" mass="0.05"/>
+        </body>
+
+        <body name="right_wheel" pos="0 -0.08 0">
+            <joint name="right_wheel" type="hinge" damping="0.01" armature="0.04" axis="0 1 0"/>
+            <geom name="right_wheel" type="cylinder" size="0.0335 0.01" rgba="0 0 0 1" zaxis="0 1 0" friction="1.2" mass="0.05"/>
+        </body>
+        
+        <body name="pole1" pos="0 0 0.02">
+            <joint name="pole1" type="hinge" axis="0 1 0"/>
+            <geom name="pole1" type="box" pos="0 0 0.063" size="0.02 0.06 0.063" rgba="0 1 0 1" mass="0.4"/>
+
+            <body name="pole2" pos="0 0 0.126">
+                <joint name="pole2" type="hinge" axis="0 1 0"/>
+                <geom name="pole2" type="cylinder" pos="0 0 0.195" size="0.005 0.195" rgba="1 0 0 1" zaxis="0 0 1" mass="0.1"/>
+            </body>
+        </body>
+
+    </body>
+  </worldbody>
+
+<!--电机,提供力矩,左右轮,电机型号官网找的,Gemini推荐的ctrlrange和gear参数,以及joint中损耗相关-->
+  <actuator>
+    <motor name="left_motor"  joint="left_wheel"  gear="2.4"/>
+    <motor name="right_motor" joint="right_wheel" gear="2.4"/>
+  </actuator>
+  
+<!--模拟传感器,8个变量-->  
+  <sensor>
+    <!--qpos:-->
+    <jointpos name="theta_left" joint="left_wheel"/>
+    <jointpos name="theta_right" joint="right_wheel"/>
+    <jointpos name="theta_pole1" joint="pole1"/>
+    <jointpos name="theta_pole2" joint="pole2"/>
+    <!--qvel:-->
+    <jointvel name="theta_left_dot" joint="left_wheel"/>
+    <jointvel name="theta_right_dot" joint="right_wheel"/>
+    <jointvel name="theta_pole1_dot" joint="pole1"/>
+    <jointvel name="theta_pole2_dot" joint="pole2"/>
+    
+  </sensor>
+</mujoco>
