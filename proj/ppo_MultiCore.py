@@ -5,16 +5,16 @@ import gymnasium as gym
 from stable_baselines3 import PPO
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import EvalCallback
-from stable_baselines3.common.vec_env import SubprocVecEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv,VecVideoRecorder
 from stable_baselines3.common.utils import set_random_seed
 from cart_pole_env import CartPoleEnv 
 
-def make_env(rank, log_dir, seed=0):
+def make_env(rank, log_dir, seed=42):
     """
     【核心工具函数】在独立的 16 个子进程内部安全地实例化环境并挂载 Monitor
     """
     def _init():
-        env = CartPoleEnv()
+        env = CartPoleEnv(render_mode="rgb_array")
         env.reset(seed=seed + rank)
         
         # 为每个核心指定独立的文件名，防止多进程文件锁死冲突
@@ -31,9 +31,9 @@ def main():
     # 1. 初始化 16 核并行总线与文件路径
     # ==========================================
     num_cpu = 16  # 压榨你的多核硬件性能
-    total_timesteps = int(6e5)  # 
+    total_timesteps = int(2e6)  # 2m
     
-    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    timestamp = time.strftime("%Y%m%d_%H%M")
     log_dir = f"./tb_logs/PPO_CartPole_{timestamp}_{total_timesteps}/"
     model_dir = f"./saved_models/PPO_CartPole_{timestamp}_{total_timesteps}/"
     os.makedirs(log_dir, exist_ok=True)
@@ -44,6 +44,15 @@ def main():
     # 完美构建：16个穿好 Monitor 的并行子环境
     parallel_train_env = SubprocVecEnv([make_env(i, log_dir) for i in range(num_cpu)])
 
+    env = VecVideoRecorder(
+        parallel_train_env,
+        f"./video/{timestamp}",
+        record_video_trigger=lambda step: step % 40000 == 0,
+        video_length=1000,
+        name_prefix="ppo-parallel-double-pendulum"
+    )
+
+
     # 评估环境（期中考试）：独立单体测试环境即可，必须加上单体 Monitor
     eval_env = CartPoleEnv()
     eval_env = Monitor(eval_env, filename=os.path.join(log_dir, "monitor_eval"))
@@ -53,10 +62,18 @@ def main():
     # ==========================================
     # 2. PPO 算法核心配置 (绑定并行环境)
     # ==========================================
-    # 注意：此时由于有 16 核，每次更新的样本量为 n_steps * num_cpu = 2048 * 16 = 32768 步！
+    
+    # # 自定义网络拓扑
+    # policy_kwargs = dict(
+    #     net_arch=dict(
+    #         pi=[256, 256],  # Actor (Policy) 更改为两层 256
+    #         vf=[256, 256]   # Critic (Value Function) 更改为两层 256
+    #     ))
+
     model = PPO(
         policy="MlpPolicy",
-        env=parallel_train_env,       # 【修复】必须把并行的环境喂给 PPO！
+        env=env,       # 【修复】必须把并行的环境喂给 PPO！
+        #policy_kwargs=policy_kwargs,
         learning_rate=3e-4,           # 经典初始学习率
         n_steps=2048,                 # 每个核心采样 2048 步
         batch_size=64,                # 神经网络训练的 Mini-batch 大小
@@ -91,37 +108,12 @@ def main():
     model.learn(total_timesteps=total_timesteps, callback=eval_callback, progress_bar=True)
 
     # 训练彻底结束后，保存最终版
-    model.save(os.path.join(model_dir, "ppo_cartpole_final"))
+    model.save(os.path.join(model_dir, f"ppo_cartpole_final"))
     print("--- 训练结束！最终模型与最佳模型均已安全保存 ---")
     
     # 及时关闭并行环境，释放多进程内存
     parallel_train_env.close()
 
-    # ==========================================
-    # 5. 仿真过程的可视化展示 (单进程表演)
-    # ==========================================
-    print("\n--- 训练完成，现在开始进行【最优策略可视化展示】 ---")
-    
-    best_model = PPO.load(os.path.join(model_dir, "best_model.zip"))
-    test_env = CartPoleEnv()
-    
-    for episode in range(5):
-        obs, info = test_env.reset()
-        done = False
-        ep_reward = 0
-        
-        while not done:
-            action, _ = best_model.predict(obs, deterministic=True)
-            obs, reward, terminated, truncated, info = test_env.step(action)
-            done = terminated or truncated
-            ep_reward += reward
-            
-            test_env.render()
-            time.sleep(0.005) # 匹配真实的 MuJoCo 时间步长
-            
-        print(f"测试第 {episode + 1} 局结束，得分: {ep_reward:.2f}")
-        
-    test_env.close()
 
 if __name__ == "__main__":
     main()
