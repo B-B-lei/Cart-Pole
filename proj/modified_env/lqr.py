@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.io
-from env import LinearCartPoleEnv 
+from LinearEnv import LinearCartPoleEnv 
 
 class LQR:
     def __init__(self, mat_path):
