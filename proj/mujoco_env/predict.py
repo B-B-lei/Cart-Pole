@@ -12,7 +12,7 @@ from cart_pole_env import CartPoleEnv
 
 
 log_dir = "./tb_logs/"          # 存放 TensorBoard 图表日志的路径
-model_dir = "./saved_models/PPO_CartPole_20260520_1658_2000000"    # 存放训练好的模型的路径
+model_dir = "./saved_models/PPO_CartPole_20260527_0925_3000000"    # 存放训练好的模型的路径
 os.makedirs(log_dir, exist_ok=True)
 os.makedirs(model_dir, exist_ok=True)
 
