@@ -46,13 +46,13 @@
 
         <body name="left_wheel" pos="0 0.08 0">
             <joint name="left_wheel" type="hinge" damping="0.05" armature="0.01" axis="0 1 0"/>
-            <geom name="left_wheel" type="cylinder" size="0.0335 0.01" rgba="0 0 0 1" zaxis="0 1 0" friction="1.6 0.01 0.005" solref="0.02 1.2" 
+            <geom name="left_wheel" type="cylinder" size="0.0335 0.01" rgba="0 0 0 1" zaxis="0 1 0" friction="5.0 0.02 0.01" solref="0.02 1.2"
           solimp="0.8 0.95 0.001 0.5 2" mass="0.05"/>
         </body>
 
         <body name="right_wheel" pos="0 -0.08 0">
             <joint name="right_wheel" type="hinge" damping="0.05" armature="0.01" axis="0 1 0"/>
-            <geom name="right_wheel" type="cylinder" size="0.0335 0.01" rgba="0 0 0 1" zaxis="0 1 0" friction="1.6 0.01 0.005" solref="0.02 1.2" 
+            <geom name="right_wheel" type="cylinder" size="0.0335 0.01" rgba="0 0 0 1" zaxis="0 1 0" friction="5.0 0.02 0.01" solref="0.02 1.2"
           solimp="0.8 0.95 0.001 0.5 2" mass="0.05"/>
         </body>
         
@@ -71,8 +71,8 @@
 
 <!--电机,提供力矩,左右轮,电机型号官网找的,Gemini推荐的ctrlrange和gear参数,以及joint中损耗相关-->
   <actuator>
-    <motor name="left_motor"  joint="left_wheel"  gear="2.4" ctrlrange="-30 30"/>
-    <motor name="right_motor" joint="right_wheel" gear="2.4" ctrlrange="-30 30"/>
+    <motor name="left_motor"  joint="left_wheel"  gear="15" ctrlrange="-30 30"/>
+    <motor name="right_motor" joint="right_wheel" gear="15" ctrlrange="-30 30"/>
   </actuator>
 <!-- <actuator>
   <velocity name="left_motor" joint="left_wheel" kv="3.5" gear="1"/>
